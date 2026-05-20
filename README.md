@@ -84,33 +84,36 @@ Frontend Polling Updates UI
 
 --- 
 
-# Document Processing Flow
+## Document Processing Flow
 
+```text
 User uploads PDF
-↓
+        ↓
 Express uploads file to AWS S3
-↓
-Express creates Document row in PostgreSQL
-↓
+        ↓
+Express creates document row in PostgreSQL
+        ↓
 Express sends processing job to AWS SQS
-↓
+        ↓
 AWS Lambda automatically triggered
-↓
+        ↓
 Lambda downloads PDF from S3
-↓
+        ↓
 Lambda extracts text and chunks content
-↓
+        ↓
 Lambda generates study tools
-↓
+        ↓
 Lambda updates PostgreSQL
-↓
+        ↓
 Frontend polls backend and updates UI
+```
 
 ---
 
 
-# Project Structure
+## Project Structure
 
+```text
 SourceMind/
 │
 ├── client/             # React frontend
@@ -119,6 +122,7 @@ SourceMind/
 ├── lambda-worker/      # AWS Lambda worker
 ├── docker-compose.yml
 └── README.md
+```
 
 ---
 
@@ -189,10 +193,11 @@ If processing fails:
 
 ---
 
-# Environment Variables
+## Environment Variables
 
-## Server
+### Server
 
+```env
 DATABASE_URL=
 JWT_SECRET=
 AWS_ACCESS_KEY_ID=
@@ -201,13 +206,16 @@ AWS_REGION=
 AWS_BUCKET_NAME=
 AWS_SQS_QUEUE_URL=
 GEMINI_API_KEY=
+```
 
-## Lambda
+### Lambda
 
+```env
 DATABASE_URL=
 GEMINI_API_KEY=
 USE_MOCK_AI=true
 AWS_BUCKET_NAME=
+```
 
 ---
 
