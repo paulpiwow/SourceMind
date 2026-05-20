@@ -234,3 +234,41 @@ Used for real AI-generated study tools.
 USE_MOCK_AI=false
 
 ---
+
+## Screenshots
+
+### Login
+![Login](screenshots/login.png)
+
+### Register
+![Register](screenshots/register.png)
+
+### Dashboard
+![Dashboard](screenshots/dashboard.png)
+
+### Document Queued
+![Document Queued](screenshots/documentQueued.png)
+
+### Document Processing
+![Document Processing](screenshots/documentProcessing.png)
+
+### Document Completed
+![Document Completed](screenshots/documentCompleted.png)
+
+### Document Detail
+![Document Detail](screenshots/documentDetails.png)
+
+### Study Tools
+![Study Tools](screenshots/studyTools.png)
+
+### Chatbot
+![Chatbot](screenshots/chatbot.png)
+
+### AWS S3 Storage
+![S3](screenshots/s3.png)
+
+### AWS SQS Queue
+![SQS](screenshots/sqs.png)
+
+### AWS Lambda CloudWatch Logs
+![CloudWatch](screenshots/cloudwatch.png)
