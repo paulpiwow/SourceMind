@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 function App() {
-  const [email, setEmail] = useState("paul@test.com");
-  const [password, setPassword] = useState("password123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [token, setToken] = useState("");
   const [user, setUser] = useState(null);
   const [documents, setDocuments] = useState([]);
@@ -15,6 +15,8 @@ function App() {
   const [chatMessage, setChatMessage] = useState("");
   const [chatHistory, setChatHistory] = useState([]);
   const [chatLoading, setChatLoading] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [name, setName] = useState("");
 
   // Logs user in and loads their documents
   async function handleLogin(e) {
@@ -47,6 +49,26 @@ function App() {
     setUser(null);
     setDocuments([]);
     setMessage("Logged out");
+  }
+
+  // Registers a new user, then switches back to login mode
+  async function handleRegister(e) {
+    e.preventDefault();
+
+    try {
+      await axios.post("http://localhost:5000/api/auth/register", {
+        name,
+        email,
+        password,
+      });
+
+      setMessage("Account created successfully. You can now log in.");
+      setIsRegistering(false);
+      setName("");
+      setPassword("");
+    } catch (error) {
+      setMessage(error.response?.data?.message || "Registration failed");
+    }
   }
 
   // Uploads a PDF to the backend, waits for processing, then adds it to the dashboard
@@ -160,6 +182,30 @@ function App() {
   }
 
 
+  // Auto-refreshes the currently opened document detail page
+  useEffect(() => {
+    if (!selectedDocument || !token) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const response = await axios.get(
+          `http://localhost:5000/api/documents/${selectedDocument.id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        setSelectedDocument(response.data.document);
+      } catch (error) {
+        console.error("Failed to refresh selected document:", error);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [selectedDocument, token]);
+
   // Gets a temporary signed S3 URL from the backend and opens the PDF
   async function handleDownloadPdf() {
     try {
@@ -220,6 +266,29 @@ function App() {
     setDocuments(response.data.documents);
   }
 
+
+  // Re-queues a failed document for background processing
+  async function handleRetryDocument() {
+    try {
+      const response = await axios.post(
+        `http://localhost:5000/api/documents/${selectedDocument.id}/retry`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setSelectedDocument(response.data.document);
+      await fetchDocuments();
+      setMessage("Document retry queued.");
+    } catch (error) {
+      setMessage(error.response?.data?.message || "Failed to retry document.");
+    }
+  }
+
+
   // Auto-refreshes document statuses while user is logged in
   useEffect(() => {
     if (!token) return;
@@ -231,7 +300,16 @@ function App() {
     return () => clearInterval(interval);
   }, [token]);
 
-  // Login screen
+
+  // Returns color styling based on document processing status
+  function getStatusColor(status) {
+    if (status === "COMPLETED") return "text-green-400";
+    if (status === "FAILED") return "text-red-400";
+    return "text-yellow-400";
+  }
+
+
+  // Login / Register screen
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-6">
@@ -239,29 +317,47 @@ function App() {
           <h1 className="text-3xl font-bold mb-2">SourceMind</h1>
 
           <p className="text-slate-400 mb-6">
-            AI-powered document intelligence platform.
+            {isRegistering
+              ? "Create your account."
+              : "AI-powered document intelligence platform."}
           </p>
 
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form
+            onSubmit={isRegistering ? handleRegister : handleLogin}
+            className="space-y-4"
+          >
+            {isRegistering && (
+              <div>
+                <label className="block text-sm mb-1">Name</label>
+                <input
+                  className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  type="text"
+                  placeholder="Your name"
+                />
+              </div>
+            )}
+
             <div>
               <label className="block text-sm mb-1">Email</label>
-
               <input
                 className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 type="email"
+                placeholder="you@example.com"
               />
             </div>
 
             <div>
               <label className="block text-sm mb-1">Password</label>
-
               <input
                 className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 type="password"
+                placeholder="password"
               />
             </div>
 
@@ -269,13 +365,23 @@ function App() {
               type="submit"
               className="w-full rounded-lg bg-blue-600 hover:bg-blue-700 py-2 font-semibold"
             >
-              Login
+              {isRegistering ? "Create Account" : "Login"}
             </button>
           </form>
 
-          {message && (
-            <p className="mt-4 text-sm text-green-400">{message}</p>
-          )}
+          <button
+            onClick={() => {
+              setIsRegistering(!isRegistering);
+              setMessage("");
+            }}
+            className="mt-4 text-sm text-blue-400 hover:text-blue-300"
+          >
+            {isRegistering
+              ? "Already have an account? Log in"
+              : "Need an account? Register"}
+          </button>
+
+          {message && <p className="mt-4 text-sm text-slate-300">{message}</p>}
         </div>
       </div>
     );
@@ -303,11 +409,7 @@ function App() {
 
             <p className="text-sm mt-3">
               Status:{" "}
-              <span
-                className={
-                  isCompleted ? "text-green-400" : "text-yellow-400"
-                }
-              >
+              <span className={getStatusColor(selectedDocument.status)}>
                 {selectedDocument.status}
               </span>
             </p>
@@ -327,14 +429,36 @@ function App() {
 
           {!isCompleted ? (
             <div className="bg-slate-900 rounded-2xl p-6">
-              <h2 className="text-2xl font-semibold mb-2">
-                Processing Document
-              </h2>
-              <p className="text-slate-400">
-                This document is currently {selectedDocument.status}. The worker
-                is extracting text, generating study tools, and preparing chat
-                context. Please return to the dashboard and wait for it to finish.
-              </p>
+              {selectedDocument.status === "FAILED" ? (
+                <>
+                  <h2 className="text-2xl font-semibold mb-2 text-red-400">
+                    Processing Failed
+                  </h2>
+
+                  <p className="text-slate-400">
+                    This document failed during processing. You can delete it and upload
+                    it again, or retry processing now.
+                  </p>
+
+                  <button
+                    onClick={handleRetryDocument}
+                    className="mt-4 bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded-lg font-semibold"
+                  >
+                    Retry Processing
+                  </button>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-2xl font-semibold mb-2">
+                    Processing Document
+                  </h2>
+
+                  <p className="text-slate-400">
+                    This document is currently {selectedDocument.status}. The worker is
+                    extracting text, generating study tools, and preparing chat context.
+                  </p>
+                </>
+              )}
             </div>
           ) : (
             <>
@@ -525,7 +649,7 @@ function App() {
 
                   <p className="text-sm mt-2">
                     Status:{" "}
-                    <span className="text-green-400">{doc.status}</span>
+                    <span className={getStatusColor(doc.status)}>{doc.status}</span>
                   </p>
 
                   {doc.summary && (

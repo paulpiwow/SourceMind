@@ -73,6 +73,12 @@ async function downloadPdfFromS3(s3Key) {
     return streamToBuffer(response.Body);
 }
 
+// Pauses execution for a given number of milliseconds
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Generates structured study tools from extracted PDF text with retry handling
 async function generateStudyTools(text) {
     const prompt = `
 You are an AI study assistant.
@@ -108,10 +114,26 @@ Document:
 ${text}
 `;
 
-    const result = await model.generateContent(prompt);
-    const responseText = result.response.text();
+    const maxAttempts = 3;
 
-    return JSON.parse(responseText);
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            console.log(`Calling Gemini attempt ${attempt}/${maxAttempts}`);
+
+            const result = await model.generateContent(prompt);
+            const responseText = result.response.text();
+
+            return JSON.parse(responseText);
+        } catch (error) {
+            console.error(`Gemini attempt ${attempt} failed:`, error.message);
+
+            if (attempt === maxAttempts) {
+                throw error;
+            }
+
+            await sleep(attempt * 2000);
+        }
+    }
 }
 
 async function processDocumentJob(job) {
@@ -205,6 +227,25 @@ async function pollQueue() {
                 console.log("Job deleted from queue.");
             } catch (error) {
                 console.error("Failed to process job:", error);
+
+                try {
+                    const job = JSON.parse(message.Body);
+
+                    await pool.query(
+                        `
+                        UPDATE "Document"
+                        SET 
+                        status = $1,
+                        "updatedAt" = NOW()
+                        WHERE id = $2
+                        `,
+                        ["FAILED", job.documentId]
+                    );
+
+                    console.log("Document marked as FAILED:", job.documentId);
+                } catch (dbError) {
+                    console.error("Failed to update FAILED status:", dbError);
+                }
             }
         }
     }

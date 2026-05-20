@@ -296,7 +296,7 @@ router.delete("/:id", protect, async (req, res) => {
     if (document.s3Key) {
       await deleteFileFromS3(document.s3Key);
     }
-    
+
     await prisma.document.delete({
       where: {
         id: document.id,
@@ -310,6 +310,52 @@ router.delete("/:id", protect, async (req, res) => {
   } catch (error) {
     console.error("Delete document error:", error);
     res.status(500).json({ message: "Server error deleting document" });
+  }
+});
+
+// Retry processing for a failed document
+router.post("/:id/retry", protect, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const document = await prisma.document.findFirst({
+      where: {
+        id,
+        userId: req.user.userId,
+      },
+    });
+
+    if (!document) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    if (!document.s3Key) {
+      return res.status(400).json({ message: "Document has no S3 file" });
+    }
+
+    const updatedDocument = await prisma.document.update({
+      where: {
+        id: document.id,
+      },
+      data: {
+        status: "QUEUED",
+      },
+    });
+
+    await sendDocumentJob({
+      documentId: document.id,
+      userId: req.user.userId,
+      s3Key: document.s3Key,
+      originalFilename: document.originalFilename,
+    });
+
+    res.json({
+      message: "Document retry queued successfully",
+      document: updatedDocument,
+    });
+  } catch (error) {
+    console.error("Retry document error:", error);
+    res.status(500).json({ message: "Server error retrying document" });
   }
 });
 

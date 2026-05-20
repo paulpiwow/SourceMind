@@ -1,0 +1,14 @@
+services:
+  server:
+    build: ./server
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./server/.env
+
+  worker:
+    build: ./worker
+    env_file:
+      - ./worker/.env
+    depends_on:
+      - server
