@@ -80,6 +80,68 @@ function sleep(ms) {
 
 // Generates structured study tools from extracted PDF text with retry handling
 async function generateStudyTools(text) {
+
+
+    if (process.env.USE_MOCK_AI === "true") {
+        return {
+            summary:
+                "Mock summary: This document was processed successfully through the worker pipeline.",
+            keyConcepts: [
+                "Mock concept 1",
+                "Mock concept 2",
+                "Mock concept 3",
+                "Mock concept 4",
+                "Mock concept 5",
+            ],
+            flashcards: [
+                {
+                    question: "Mock question 1?",
+                    answer: "Mock answer 1.",
+                },
+                {
+                    question: "Mock question 2?",
+                    answer: "Mock answer 2.",
+                },
+                {
+                    question: "Mock question 3?",
+                    answer: "Mock answer 3.",
+                },
+                {
+                    question: "Mock question 4?",
+                    answer: "Mock answer 4.",
+                },
+                {
+                    question: "Mock question 5?",
+                    answer: "Mock answer 5.",
+                },
+            ],
+            quizQuestions: [
+                {
+                    question: "Mock quiz question 1?",
+                    answer: "Mock quiz answer 1.",
+                },
+                {
+                    question: "Mock quiz question 2?",
+                    answer: "Mock quiz answer 2.",
+                },
+                {
+                    question: "Mock quiz question 3?",
+                    answer: "Mock quiz answer 3.",
+                },
+                {
+                    question: "Mock quiz question 4?",
+                    answer: "Mock quiz answer 4.",
+                },
+                {
+                    question: "Mock quiz question 5?",
+                    answer: "Mock quiz answer 5.",
+                },
+            ],
+        };
+    }
+
+
+
     const prompt = `
 You are an AI study assistant.
 
