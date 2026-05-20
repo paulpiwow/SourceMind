@@ -24,7 +24,7 @@ function App() {
 
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/auth/login",
+        "https://sourcemind-fr2w.onrender.com/api/auth/login",
         {
           email,
           password,
@@ -56,7 +56,7 @@ function App() {
     e.preventDefault();
 
     try {
-      await axios.post("http://localhost:5000/api/auth/register", {
+      await axios.post("https://sourcemind-fr2w.onrender.com/api/auth/register", {
         name,
         email,
         password,
@@ -89,7 +89,7 @@ function App() {
       formData.append("file", selectedFile);
 
       const response = await axios.post(
-        "http://localhost:5000/api/documents/upload",
+        "https://sourcemind-fr2w.onrender.com/api/documents/upload",
         formData,
         {
           headers: {
@@ -114,7 +114,7 @@ function App() {
   async function openDocument(documentId) {
     try {
       const documentResponse = await axios.get(
-        `http://localhost:5000/api/documents/${documentId}`,
+        `https://sourcemind-fr2w.onrender.com/api/documents/${documentId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -123,7 +123,7 @@ function App() {
       );
 
       const chatResponse = await axios.get(
-        `http://localhost:5000/api/documents/${documentId}/chat`,
+        `https://sourcemind-fr2w.onrender.com/api/documents/${documentId}/chat`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -150,7 +150,7 @@ function App() {
 
     try {
       const response = await axios.post(
-        `http://localhost:5000/api/documents/${selectedDocument.id}/chat`,
+        `https://sourcemind-fr2w.onrender.com/api/documents/${selectedDocument.id}/chat`,
         {
           message: chatMessage,
         },
@@ -189,7 +189,7 @@ function App() {
     const interval = setInterval(async () => {
       try {
         const response = await axios.get(
-          `http://localhost:5000/api/documents/${selectedDocument.id}`,
+          `https://sourcemind-fr2w.onrender.com/api/documents/${selectedDocument.id}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -210,7 +210,7 @@ function App() {
   async function handleDownloadPdf() {
     try {
       const response = await axios.get(
-        `http://localhost:5000/api/documents/${selectedDocument.id}/download`,
+        `https://sourcemind-fr2w.onrender.com/api/documents/${selectedDocument.id}/download`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -235,7 +235,7 @@ function App() {
 
     try {
       await axios.delete(
-        `http://localhost:5000/api/documents/${selectedDocument.id}`,
+        `https://sourcemind-fr2w.onrender.com/api/documents/${selectedDocument.id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -257,7 +257,7 @@ function App() {
 
   // Fetches the latest documents for the logged-in user
   async function fetchDocuments(jwtToken = token) {
-    const response = await axios.get("http://localhost:5000/api/documents", {
+    const response = await axios.get("https://sourcemind-fr2w.onrender.com/api/documents", {
       headers: {
         Authorization: `Bearer ${jwtToken}`,
       },
@@ -271,7 +271,7 @@ function App() {
   async function handleRetryDocument() {
     try {
       const response = await axios.post(
-        `http://localhost:5000/api/documents/${selectedDocument.id}/retry`,
+        `https://sourcemind-fr2w.onrender.com/api/documents/${selectedDocument.id}/retry`,
         {},
         {
           headers: {

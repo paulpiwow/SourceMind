@@ -11,10 +11,12 @@ const documentRoutes = require("./src/routes/documentRoutes"); // imports docume
 
 const app = express(); // creates the express app - backend server
 
-// Allows React frontend to make requests to backend
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: [
+      "http://localhost:5173",
+      "https://source-mind-beryl.vercel.app",
+    ],
     credentials: true,
   })
 );
