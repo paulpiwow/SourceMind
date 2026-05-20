@@ -4,10 +4,16 @@ const protect = require("../middleware/authMiddleware"); // imports JWT middlewa
 const upload = require("../middleware/uploadMiddleware"); // imports Multer upload middleware for PDF files
 const { extractTextFromPdf, chunkText } = require("../utils/pdfProcessor"); // imports PDF extraction and chunking helpers
 const { generateStudyTools, generateChatAnswer } = require("../utils/gemini"); // imports Gemini helpers for study tools and chat answers
+const { sendDocumentJob } = require("../utils/sqs"); // sends document processing jobs to AWS SQS
+const {
+  uploadFileToS3,
+  getS3SignedUrl,
+  deleteFileFromS3,
+} = require("../utils/s3"); // uploads, signs, and deletes S3 files
 
 const router = express.Router(); // creates a mini-router for document routes
 
-// Upload a real PDF file, extract its text, chunk it, and save everything for the logged-in user
+// Upload a PDF, store it in S3, create a document record, and queue background processing
 router.post("/upload", protect, upload.single("file"), async (req, res) => {
   try {
     const { title } = req.body;
@@ -16,47 +22,35 @@ router.post("/upload", protect, upload.single("file"), async (req, res) => {
       return res.status(400).json({ message: "PDF file is required" });
     }
 
+    const s3Key = await uploadFileToS3(
+      req.file.path,
+      req.file.originalname,
+      req.user.userId
+    );
+
     const document = await prisma.document.create({
       data: {
         title: title || req.file.originalname,
         originalFilename: req.file.originalname,
-        s3Key: req.file.path,
-        status: "PROCESSING",
+        s3Key,
+        status: "QUEUED",
         userId: req.user.userId,
       },
     });
 
-    const extractedText = await extractTextFromPdf(req.file.path);
-    const chunks = chunkText(extractedText);
-
-    await prisma.documentChunk.createMany({
-      data: chunks.map((chunk, index) => ({
-        content: chunk,
-        chunkIndex: index,
-        documentId: document.id,
-      })),
+    await sendDocumentJob({
+      documentId: document.id,
+      userId: req.user.userId,
+      s3Key,
+      originalFilename: req.file.originalname,
     });
 
-    const studyTools = await generateStudyTools(extractedText.slice(0, 12000)); // sends extracted PDF text to Gemini and gets structured study data
-
-    const updatedDocument = await prisma.document.update({
-      where: { id: document.id },
-      data: {
-        status: "COMPLETED",
-        summary: studyTools.summary,
-        keyConcepts: studyTools.keyConcepts,
-        flashcards: studyTools.flashcards,
-        quizQuestions: studyTools.quizQuestions,
-      },
-    });
-
-    res.status(201).json({
-      message: "PDF uploaded and processed successfully",
-      document: updatedDocument,
-      chunkCount: chunks.length,
+    res.status(202).json({
+      message: "PDF uploaded and queued for processing",
+      document,
       file: {
         originalName: req.file.originalname,
-        savedPath: req.file.path,
+        s3Key,
         size: req.file.size,
       },
     });
@@ -248,6 +242,74 @@ router.get("/:id/chat", protect, async (req, res) => {
   } catch (error) {
     console.error("Get chat history error:", error);
     res.status(500).json({ message: "Server error getting chat history" });
+  }
+});
+
+// Creates a temporary signed URL so the logged-in user can view/download their original PDF
+router.get("/:id/download", protect, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const document = await prisma.document.findFirst({
+      where: {
+        id,
+        userId: req.user.userId,
+      },
+    });
+
+    if (!document) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    if (!document.s3Key) {
+      return res.status(400).json({ message: "Document has no S3 file" });
+    }
+
+    const signedUrl = await getS3SignedUrl(document.s3Key);
+
+    res.json({
+      message: "Signed URL created successfully",
+      url: signedUrl,
+    });
+  } catch (error) {
+    console.error("Download URL error:", error);
+    res.status(500).json({ message: "Server error creating download URL" });
+  }
+});
+
+// Delete one document owned by the logged-in user
+router.delete("/:id", protect, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const document = await prisma.document.findFirst({
+      where: {
+        id,
+        userId: req.user.userId,
+      },
+    });
+
+    if (!document) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    if (document.s3Key) {
+      await deleteFileFromS3(document.s3Key);
+    }
+    
+    await prisma.document.delete({
+      where: {
+        id: document.id,
+      },
+    });
+
+    res.json({
+      message: "Document deleted successfully",
+      deletedDocumentId: id,
+    });
+  } catch (error) {
+    console.error("Delete document error:", error);
+    res.status(500).json({ message: "Server error deleting document" });
   }
 });
 
