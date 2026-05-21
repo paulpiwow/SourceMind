@@ -234,35 +234,16 @@ Used for real AI-generated study tools.
 USE_MOCK_AI=false
 
 ---
+## Live Demo
 
-## Screenshots
+Frontend:
+https://source-mind-beryl.vercel.app
 
-### Login
-![Login](screenshots/login.png)
+Backend Health Check:
+https://sourcemind-fr2w.onrender.com/api/health
 
-### Register
-![Register](screenshots/register.png)
-
-### Dashboard
-![Dashboard](screenshots/dashboard.png)
-
-### Document Queued
-![Document Queued](screenshots/documentQueued.png)
-
-### Document Processing
-![Document Processing](screenshots/documentProcessing.png)
-
-### Document Completed
-![Document Completed](screenshots/documentCompleted.png)
-
-### Document Detail
-![Document Detail](screenshots/documentDetails.png)
-
-### Study Tools
-![Study Tools](screenshots/studyTools.png)
-
-### Chatbot
-![Chatbot](screenshots/chatbot.png)
+Demo Video:
+https://youtu.be/JpRoQ0LWkP0
 
 ### AWS S3 Storage
 ![S3](screenshots/s3.png)
